@@ -1,0 +1,25 @@
+.mod_courseguide_addbutton {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.mod_courseguide_manageguide {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.mod_courseguide_right {
+    text-align: right;
+}
+
+.mod_courseguide_foldername {
+    display: block;
+}
+
+.mod_courseguide_admin_action {
+    margin-right: 5px;
+}
+
+.mod_courseguide_expandicon {
+    cursor: pointer;
+}

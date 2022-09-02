@@ -1,0 +1,24 @@
+.block_moderator_guide_addbutton {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.block_moderator_guide_manageguide {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.block_moderator_guide_right {
+    text-align: right;
+}
+
+.block_moderator_guide_foldername {
+    display: block;
+}
+
+#page-blocks-moderator_guide-view #moderationbox #fitem_id_submitbutton {
+    padding: 0;
+    margin-top: 0;
+    border-top: 0;
+    background-color: inherit;
+}

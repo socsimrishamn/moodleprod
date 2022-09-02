@@ -23,8 +23,7 @@ Feature: Course reset with coursecertificate module
       | activity          | name             | course | idnumber | template    |
       | coursecertificate | Test certificate | C1     | ccert    | Template 01 |
     When I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I navigate to "Reset" in current page administration
+    And I am on the "Course 1" "reset" page
     And I press "Select default"
     And I expand all fieldsets
     And the field "Archive issued certificates" matches value "1"
@@ -41,15 +40,16 @@ Feature: Course reset with coursecertificate module
       | student2 | C1     | student        |
       | student3 | C1     | student        |
     And the following "activities" exist:
-      | activity          | name             | course | idnumber | template    | completion | completionview |
-      | coursecertificate | Test certificate | C1     | ccert    | Template 01 | 2          | 1              |
+      | activity          | name             | course | idnumber | template    | completion |
+      | coursecertificate | Test certificate | C1     | ccert    | Template 01 | 1          |
     And the following certificate issues exist:
       | template    | user      | course | component             | code  | timecreated |
       | Template 01 | student1  | C1     | mod_coursecertificate | code1 | 1009882800  |
       | Template 01 | student2  | C1     | mod_coursecertificate |       | 1009969200  |
     When I log in as "student1"
     And I am on "Course 1" course homepage
-    And I follow "Test certificate"
+    When I toggle the manual completion state of "Test certificate"
+    Then the manual completion button of "Test certificate" is displayed as "Done"
     When I log in as "teacher1"
     And I am on "Course 1" course homepage
     And I follow "Test certificate"
@@ -59,12 +59,12 @@ Feature: Course reset with coursecertificate module
       | Student First        | student1@example.com | Never       | 1 January 2002 |
     And I should not see "Archived" in the ".generaltable" "css_element"
     When I am on "Course 1" course homepage
-    And I navigate to "Reports > Activity completion" in current page administration
+    And I navigate to "Reports" in current page administration
+    And I click on "Activity completion" "link"
     And "Completed" "icon" should exist in the "Student First" "table_row"
     And "Completed" "icon" should not exist in the "Student Second" "table_row"
     And "Completed" "icon" should not exist in the "Student Third" "table_row"
-    And I am on "Course 1" course homepage
-    And I navigate to "Reset" in current page administration
+    And I am on the "Course 1" "reset" page
     And I set the following fields to these values:
       | Archive issued certificates | 1 |
       | Delete completion data      | 1 |
@@ -72,10 +72,9 @@ Feature: Course reset with coursecertificate module
     And I press "Continue"
     When I am on "Course 1" course homepage
     And I follow "Test certificate"
-    And the following should exist in the "generaltable" table:
-      | First name / Surname    | Email address        | Expiry date | Date issued    |
-      | Student Second Archived | student2@example.com | Never       | 2 January 2002 |
-      | Student First Archived  | student1@example.com | Never       | 1 January 2002 |
+    And I should see "Archived" in the "student1@example.com" "table_row"
+    And I should see "Archived" in the "student2@example.com" "table_row"
     And I am on "Course 1" course homepage
-    And I navigate to "Reports > Activity completion" in current page administration
+    And I navigate to "Reports" in current page administration
+    And I click on "Activity completion" "link"
     And "Completed" "icon" should not exist in the "Student First" "table_row"

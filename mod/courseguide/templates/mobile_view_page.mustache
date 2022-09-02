@@ -1,0 +1,16 @@
+{{=<% %>=}}
+<div>
+    <ion-card _ngcontent-c2="" class="card card-md">
+    <%#htmlelements%>
+      <%#text%>
+          <ion-item _ngcontent-c1="" class="item item-block item-md">
+            <core-format-text text="<% value %>" component="mod_courseguide" componentId="<% cmid %>"></core-format-text>
+          </ion-item>
+      <%/text%>
+      <%#files%>
+          <core-file [file]="{fileurl: '<% url %>', filename: '<% name %>', timemodified: '<% timemodified %>', filesize: '<% size %>'}" component="mod_courseguide" componentId="<% cmid %>"></core-file>
+      <%/files%>
+    <%/htmlelements%>
+    </ion-card>
+</div>
+

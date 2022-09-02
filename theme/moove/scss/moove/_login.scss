@@ -1,166 +1,95 @@
-#page-login-index.moove-login {
-    background-color: #f1f1f1;
-    margin-left: 0;
+.path-login {
+    #page {
+        max-width: 100%;
+    }
 
-    #page-wrapper {
-        padding-bottom: 0;
-
-        #page {
-            margin-top: 0;
-            background-size: cover;
-            background-position: center;
-            min-height: 100vh;
-        }
-
-        &::after {
-            min-height: 0;
+    .login-container {
+        .login-logo {
+            justify-content: left;
         }
     }
 
-    .logo {
-        text-align: center;
-        margin-bottom: 2rem;
-
-        img {
-            max-height: 200px;
-        }
+    .login-identityprovider-btn.facebook {
+        background-color: $facebook-color;
+        color: #fff;
     }
+}
 
-    .row {
-        margin: 0;
-    }
+#page-login-index {
+    .login-container {
+        background-color: initial;
+        box-shadow: none;
+        padding: 0;
 
-    .instructionspanel {
-        border-radius: $m-login-padding;
-        border: none;
-    }
+        .loginform {
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 2rem;
+            box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 15%);
+            border-radius: 0.5rem;
 
-    .loginpanel {
-        border-radius: $m-login-padding;
-        border: none;
-
-        .card-block {
-            padding: 0;
-
-            .form {
-                padding: 20px 15px;
-                height: $m-login-boxheight;
-                max-height: $m-login-boxheight;
-
-                .welcome {
-                    font-size: 1.2rem;
-                }
-
-                .input-group-addon {
-                    width: 40px;
-                    line-height: 30px;
-                    padding: 4px 10px;
-                    margin-bottom: 0;
-                    font-size: 1rem;
-                    text-align: center;
-                    background-color: #eceeef;
-                    border: 1px solid rgba(0,0,0,.15);
-                    border-right: 0;
-                }
-                .input-group-username .input-group-addon {
-                    border-bottom-left-radius: 0;
-                    border-bottom-right-radius: 0;
-                }
-                .input-group-password .input-group-addon {
-                    border-top: 0;
-                    border-top-left-radius: 0;
-                    border-top-right-radius: 0;
-                }
-                #username,
-                #password {
-                    border: 1px solid rgba(0, 0, 0, .15);
-                    height: 44px;
-                }
-                #username {
-                    border-bottom-left-radius: 0;
-                    border-bottom-right-radius: 0;
-                }
-                #password {
-                    border-top: 0;
-                    border-top-left-radius: 0;
-                    border-top-right-radius: 0;
-                }
-                #loginbtn {
-                    padding: 0.5rem;
-                }
+            .left-column {
+                padding-right: 2rem;
             }
 
-            .instructions {
-                background-color: $brand-primary;
-                padding: 60px 15px;
-                color: #fff;
-                min-height: $m-login-boxheight;
+            .right-column {
+                padding-left: 2rem;
+                border-left: 1px solid $gray-300;
 
-                img {
-                    max-width: 100%;
-                }
-
-                .text-info {
-                    color: #fff !important;
-                }
-
-                h2,
-                h3 {
-                    color: #fff;
-                }
-
-                hr {
-                    width: 50%;
-                    margin-top: 0;
-                    border-top: 1px solid rgba(255, 255, 255, .7);
-                }
-
-                .m-t-2 {
-                    margin-top: 1rem !important;
-                }
-
-                .btn-secondary {
-                    border: none;
+                .column-content {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
                 }
             }
         }
     }
+}
 
-    .box.generalbox.boxaligncenter {
-        border-color: $card-border-color;
-        border-radius: $card-border-radius;
-        -webkit-box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        background-color: #fff;
-        padding: 2rem !important;
+@include media-breakpoint-up(md) {
+    #page-login-index {
+        .login-container {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .loginform {
+            width: 40%;
+
+            &.hastwocolumns {
+                width: 60%;
+            }
+        }
     }
 }
 
-#page-login-signup {
-    margin-left: 0;
-    #page-wrapper {
-        padding-bottom: 0;
-        margin-bottom: 0;
-
-        &:after {
-            min-height: 0;
-        }
-
+@include media-breakpoint-down(md) {
+    #page-login-index {
         #page {
-            margin-top: 0;
-            padding-top: 50px;
-            padding-bottom: 50px;
+            padding-top: 1rem;
         }
-    }
-}
 
-.potentialidplist .potentialidp {
-    margin-bottom: 5px;
-}
+        .login-container {
+            .loginform {
+                .left-column {
+                    padding-right: 0;
+                }
 
-#page-login-signup,
-#page-login-index.moove-login {
-    .plugins_standard_footer_html {
-        display: none;
+                .right-column {
+                    padding-left: 0;
+                    border-left: none;
+
+                    .column-content {
+                        display: block;
+
+                        .login-heading {
+                            margin-top: 1rem;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

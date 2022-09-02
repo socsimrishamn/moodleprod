@@ -22,8 +22,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Defines the complete attendance structure for backup, with file and id annotations
  *
@@ -59,7 +57,8 @@ class backup_attendance_activity_structure_step extends backup_activity_structur
             'groupid', 'sessdate', 'duration', 'lasttaken', 'lasttakenby', 'timemodified',
             'description', 'descriptionformat', 'studentscanmark', 'studentpassword', 'autoassignstatus',
             'subnet', 'automark', 'automarkcompleted', 'statusset', 'absenteereport', 'preventsharedip',
-            'preventsharediptime', 'caleventid', 'calendarevent', 'includeqrcode', 'automarkcmid'));
+            'preventsharediptime', 'caleventid', 'calendarevent', 'includeqrcode', 'automarkcmid',
+            'studentsearlyopentime'));
 
         // XML nodes declaration - user data.
         $logs = new backup_nested_element('logs');

@@ -15,84 +15,69 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * A two column layout for the moove theme.
+ * A drawer based layout for the moove theme.
  *
- * @package   theme_moove
- * @copyright 2017 Willian Mano - http://conecti.me
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package    theme_moove
+ * @copyright  2022 Willian Mano {@link https://conecti.me}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-global $DB;
+global $DB, $USER, $OUTPUT, $SITE, $PAGE;
 
 // Get the profile userid.
+$courseid = optional_param('course', 1, PARAM_INT);
 $userid = optional_param('id', $USER->id, PARAM_INT);
 $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
 
-user_preference_allow_ajax_update('drawer-open-nav', PARAM_ALPHA);
-user_preference_allow_ajax_update('sidepre-open', PARAM_ALPHA);
+$primary = new core\navigation\output\primary($PAGE);
+$renderer = $PAGE->get_renderer('core');
+$primarymenu = $primary->export_for_template($renderer);
+$buildregionmainsettings = !$PAGE->include_region_main_settings_in_header_actions() && !$PAGE->has_secondary_navigation();
+// If the settings menu will be included in the header then don't add it here.
+$regionmainsettingsmenu = $buildregionmainsettings ? $OUTPUT->region_main_settings_menu() : false;
 
-require_once($CFG->libdir . '/behat/lib.php');
+$header = $PAGE->activityheader;
+$headercontent = $header->export_for_template($renderer);
 
-$hasdrawertoggle = false;
-$navdraweropen = false;
-$draweropenright = false;
+$bodyattributes = $OUTPUT->body_attributes([]);
 
-if (isloggedin()) {
-    $hasdrawertoggle = true;
-    $navdraweropen = (get_user_preferences('drawer-open-nav', 'true') == 'true');
-    $draweropenright = (get_user_preferences('sidepre-open', 'true') == 'true');
-}
+$userimg = new \user_picture($user);
+$userimg->size = 100;
 
-$blockshtml = $OUTPUT->blocks('side-pre');
-$hasblocks = strpos($blockshtml, 'data-block=') !== false;
-
-$extraclasses = [];
-if ($navdraweropen) {
-    $extraclasses[] = 'drawer-open-left';
-}
-
-if ($draweropenright && $hasblocks) {
-    $extraclasses[] = 'drawer-open-right';
-}
-
-$bodyattributes = $OUTPUT->body_attributes($extraclasses);
-$regionmainsettingsmenu = $OUTPUT->region_main_settings_menu();
 $context = context_course::instance(SITEID);
+
+$usercanviewprofile = user_can_view_profile($user);
+
 $templatecontext = [
-    'sitename' => format_string($SITE->shortname, true, ['context' => $context, "escape" => false]),
+    'sitename' => format_string($SITE->shortname, true, ['context' => context_course::instance(SITEID), "escape" => false]),
     'output' => $OUTPUT,
-    'sidepreblocks' => $blockshtml,
-    'hasblocks' => $hasblocks,
     'bodyattributes' => $bodyattributes,
-    'hasdrawertoggle' => $hasdrawertoggle,
-    'navdraweropen' => $navdraweropen,
-    'draweropenright' => $draweropenright,
+    'primarymoremenu' => $primarymenu['moremenu'],
+    'mobileprimarynav' => $primarymenu['mobileprimarynav'],
+    'usermenu' => $primarymenu['user'],
+    'langmenu' => $primarymenu['lang'],
     'regionmainsettingsmenu' => $regionmainsettingsmenu,
-    'hasregionmainsettingsmenu' => !empty($regionmainsettingsmenu)
+    'hasregionmainsettingsmenu' => !empty($regionmainsettingsmenu),
+    'userpicture' => $userimg->get_url($PAGE),
+    'userfullname' => fullname($user),
+    'headerbuttons' => \theme_moove\util\extras::get_mypublic_headerbuttons($context, $user),
+    'editprofileurl' => \theme_moove\util\extras::get_mypublic_editprofile_url($user, $courseid),
+    'usercanviewprofile' => $usercanviewprofile
 ];
 
-// Improve boost navigation.
-theme_moove_extend_flat_navigation($PAGE->flatnav);
+if ($usercanviewprofile) {
+    $countries = get_string_manager()->get_list_of_countries(true);
 
-$templatecontext['flatnavigation'] = $PAGE->flatnav;
+    $templatecontext['userdescription'] = format_text($user->description, $user->descriptionformat, ['overflowdiv' => true]);
+    $templatecontext['useremail'] = $user->email;
+    $templatecontext['usercountry'] = $user->country ? $countries[$user->country] : '';
+    $templatecontext['usercity'] = $user->city;
+}
 
-$themesettings = new \theme_moove\util\theme_settings();
+$themesettings = new \theme_moove\util\settings();
 
-$templatecontext = array_merge($templatecontext, $themesettings->footer_items());
-
-$usercourses = \theme_moove\util\extras::user_courses_with_progress($user);
-$templatecontext['hascourses'] = (count($usercourses)) ? true : false;
-$templatecontext['courses'] = array_values($usercourses);
-$templatecontext['user'] = $user;
-$templatecontext['user']->profilepicture = \theme_moove\util\extras::get_user_picture($user, 100);
-$templatecontext['user']->fullname = fullname($user);
-
-$competencyplans = \theme_moove\util\extras::get_user_competency_plans($user);
-$templatecontext['hascompetencyplans'] = (count($competencyplans)) ? true : false;
-$templatecontext['competencyplans'] = $competencyplans;
-
-$templatecontext['headerbuttons'] = \theme_moove\util\extras::get_mypublic_headerbuttons($context, $user);
+$templatecontext = array_merge($templatecontext, $themesettings->footer());
 
 echo $OUTPUT->render_from_template('theme_moove/mypublic', $templatecontext);

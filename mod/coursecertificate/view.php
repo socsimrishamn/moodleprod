@@ -34,8 +34,12 @@ $perpage = optional_param('perpage', 10, PARAM_INT);
 
 require_course_login($course, true, $cm);
 
-$outputpage = new \mod_coursecertificate\output\view_page($id, $page, $perpage, $course, $cm);
+$PAGE->set_url('/mod/coursecertificate/view.php', ['id' => $id]);
+$PAGE->set_title($course->shortname . ': ' . $PAGE->activityrecord->name);
+$PAGE->set_heading(format_string($course->fullname));
+
 $output = $PAGE->get_renderer('coursecertificate');
+$outputpage = new \mod_coursecertificate\output\view_page($id, $page, $perpage, $course, $cm);
 $data = $outputpage->export_for_template($output);
 
 // Redirect to view issue page if 'studentview' (user can not manage but can receive issues) and issue code is set.
@@ -44,22 +48,9 @@ if ($data['studentview'] && isset($data['issuecode'])) {
     redirect($issueurl);
 }
 
-$PAGE->set_url('/mod/coursecertificate/view.php', ['id' => $id]);
-$PAGE->set_title(format_string($data['certificatename']));
-$PAGE->set_heading(format_string($course->fullname));
-
 $context = \context_module::instance($id);
 $PAGE->set_context($context);
 
 echo $output->header();
-
-if ($CFG->version >= 2021050700) {
-    // Moodle 3.11 and above.
-    $cminfo = cm_info::create($cm);
-    $completiondetails = \core_completion\cm_completion_details::get_instance($cminfo, $USER->id);
-    $activitydates = \core\activity_dates::get_dates_for_module($cminfo, $USER->id);
-    echo $output->activity_information($cminfo, $completiondetails, $activitydates);
-}
-
 echo $output->render_from_template('mod_coursecertificate/view_page', $data);
 echo $output->footer();

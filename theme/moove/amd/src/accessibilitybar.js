@@ -16,12 +16,11 @@
 /**
  * Contain the logic for accessibility bar.
  *
- * @package    theme_moove
+ * @package
  * @copyright  2020 Willian Mano - http://conecti.me
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 define(['jquery', 'core/ajax'], function(jQuery, Ajax) {
-
     window.jQuery = jQuery;
 
     var SELECTORS = {

@@ -256,6 +256,7 @@ class mod_attendance_external extends external_api {
         $sess->statusset = 0;
         $sess->groupid = $groupid;
         $sess->automarkcmid = 0;
+        $sess->studentsearlyopentime = get_config('attendance', 'studentsearlyopentime');
 
         $sessionid = $attendance->add_session($sess);
         return array('sessionid' => $sessionid);
@@ -369,7 +370,7 @@ class mod_attendance_external extends external_api {
                          'lasttaken' => new external_value(PARAM_INT, 'Session last taken time.'),
                          'lasttakenby' => new external_value(PARAM_INT, 'ID of the last user that took this session.'),
                          'timemodified' => new external_value(PARAM_INT, 'Time modified.'),
-                         'description' => new external_value(PARAM_TEXT, 'Session description.'),
+                         'description' => new external_value(PARAM_RAW, 'Session description.'),
                          'descriptionformat' => new external_value(PARAM_INT, 'Session description format.'),
                          'studentscanmark' => new external_value(PARAM_INT, 'Students can mark their own presence.'),
                          'absenteereport' => new external_value(PARAM_INT, 'Session included in absetee reports.'),
@@ -377,7 +378,8 @@ class mod_attendance_external extends external_api {
                          'preventsharedip' => new external_value(PARAM_INT, 'Prevent students from sharing IP addresses.'),
                          'preventsharediptime' => new external_value(PARAM_INT, 'Time delay before IP address is allowed again.'),
                          'statusset' => new external_value(PARAM_INT, 'Session statusset.'),
-                         'includeqrcode' => new external_value(PARAM_INT, 'Include QR code when displaying password'));
+                         'includeqrcode' => new external_value(PARAM_INT, 'Include QR code when displaying password'),
+                         'studentsearlyopentime' => new external_value(PARAM_INT, 'Duration to allow session to opened early'));
 
         return $session;
     }
@@ -452,7 +454,7 @@ class mod_attendance_external extends external_api {
         $statuses = array('id' => new external_value(PARAM_INT, 'Status id.'),
                           'attendanceid' => new external_value(PARAM_INT, 'Attendance id.'),
                           'acronym' => new external_value(PARAM_TEXT, 'Status acronym.'),
-                          'description' => new external_value(PARAM_TEXT, 'Status description.'),
+                          'description' => new external_value(PARAM_RAW, 'Status description.'),
                           'grade' => new external_value(PARAM_FLOAT, 'Status grade.'),
                           'visible' => new external_value(PARAM_INT, 'Status visibility.'),
                           'deleted' => new external_value(PARAM_INT, 'informs if this session was deleted.'),
@@ -536,7 +538,7 @@ class mod_attendance_external extends external_api {
             $params['statusid'], $params['statusset']);
     }
 
-     /**
+    /**
      * Show return values.
      * @return external_value
      */
@@ -563,7 +565,7 @@ class mod_attendance_external extends external_api {
      * @return external_multiple_structure
      */
     public static function get_sessions_returns() {
-       return new external_multiple_structure(self::get_session_returns());
+        return new external_multiple_structure(self::get_session_returns());
     }
 
     /**
@@ -576,11 +578,8 @@ class mod_attendance_external extends external_api {
 
          $params = self::validate_parameters(self::get_sessions_parameters(), array(
             'attendanceid' => $attendanceid,
-        ));
+         ));
 
         return attendance_handler::get_sessions($params['attendanceid']);
-
     }
-
-    
 }

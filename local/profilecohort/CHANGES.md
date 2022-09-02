@@ -4,6 +4,13 @@ moodle-local_profilecohort
 Changes
 -------
 
+### v4.0-r1
+
+* 2022-07-12 - Slightly improve the rule management GUI
+* 2022-07-12 - Fix Behat tests which broke with Moodle 4.0
+* 2022-07-12 - Make codechecker happy again
+* 2022-07-12 - Prepare compatibility for Moodle 4.0.
+
 ### v3.11-r4
 
 * 2022-08-05 - get_all_user_name_fields() is deprecated, solves #45
