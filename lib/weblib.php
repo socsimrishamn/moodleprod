@@ -1108,7 +1108,12 @@ function page_get_doc_link_path(moodle_page $page) {
  */
 function validate_email($address) {
     global $CFG;
-    require_once($CFG->libdir.'/phpmailer/moodle_phpmailer.php');
+
+    if ($address === null || $address === false || $address === '') {
+        return false;
+    }
+
+    require_once("{$CFG->libdir}/phpmailer/moodle_phpmailer.php");
 
     return moodle_phpmailer::validateAddress($address) && !preg_match('/[<>]/', $address);
 }
@@ -1320,9 +1325,8 @@ function format_text($text, $format = FORMAT_MOODLE, $options = null, $courseidd
 
         case FORMAT_MARKDOWN:
             $text = markdown_to_html($text);
-            if (!$options['noclean']) {
-                $text = clean_text($text, FORMAT_HTML, $options);
-            }
+            // The markdown parser does not strip dangerous html so we need to clean it, even if noclean is set to true.
+            $text = clean_text($text, FORMAT_HTML, $options);
             $text = $filtermanager->filter_text($text, $context, $filteroptions);
             break;
 
@@ -2215,6 +2219,16 @@ function highlightfast($needle, $haystack) {
  * @return string Attributes
  */
 function get_html_lang($dir = false) {
+    global $CFG;
+
+    $currentlang = current_language();
+    if ($currentlang !== $CFG->lang && !get_string_manager()->translation_exists($currentlang)) {
+        // Use the default site language when the current language is not available.
+        $currentlang = $CFG->lang;
+        // Fix the current language.
+        fix_current_language($currentlang);
+    }
+
     $direction = '';
     if ($dir) {
         if (right_to_left()) {
@@ -2223,8 +2237,9 @@ function get_html_lang($dir = false) {
             $direction = ' dir="ltr"';
         }
     }
+
     // Accessibility: added the 'lang' attribute to $direction, used in theme <html> tag.
-    $language = str_replace('_', '-', current_language());
+    $language = str_replace('_', '-', $currentlang);
     @header('Content-Language: '.$language);
     return ($direction.' lang="'.$language.'" xml:lang="'.$language.'"');
 }

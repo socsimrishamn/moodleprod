@@ -3182,7 +3182,14 @@ class curl {
                     $this->proxy_type = CURLPROXY_SOCKS5;
                 } else {
                     $this->proxy_type = CURLPROXY_HTTP;
-                    $this->setopt(array('httpproxytunnel'=>false));
+                    $this->setopt([
+                        'httpproxytunnel' => false,
+                    ]);
+                    if (defined('CURLOPT_SUPPRESS_CONNECT_HEADERS')) {
+                        $this->setopt([
+                            'suppress_connect_headers' => true,
+                        ]);
+                    }
                 }
                 $this->setopt(array('proxytype'=>$this->proxy_type));
             }
@@ -3299,7 +3306,11 @@ class curl {
                     throw new coding_exception('Curl options should be defined using strings, not constant values.');
                 }
                 if (stripos($name, 'CURLOPT_') === false) {
-                    $name = strtoupper('CURLOPT_'.$name);
+                    // Only prefix with CURLOPT_ if the option doesn't contain CURLINFO_,
+                    // which is a valid prefix for at least one option CURLINFO_HEADER_OUT.
+                    if (stripos($name, 'CURLINFO_') === false) {
+                        $name = strtoupper('CURLOPT_'.$name);
+                    }
                 } else {
                     $name = strtoupper($name);
                 }

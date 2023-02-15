@@ -499,11 +499,12 @@ function print_error($errorcode, $module = 'error', $link = '', $a = null, $debu
 
 /**
  * Returns detailed information about specified exception.
- * @param exception $ex
- * @return object
+ *
+ * @param Throwable $ex any sort of exception or throwable.
+ * @return stdClass standardised info to display. Fields are clear if you look at the end of this function.
  */
-function get_exception_info($ex) {
-    global $CFG, $DB, $SESSION;
+function get_exception_info($ex): stdClass {
+    global $CFG;
 
     if ($ex instanceof moodle_exception) {
         $errorcode = $ex->errorcode;
@@ -646,6 +647,9 @@ function generate_uuid() {
  */
 function get_docs_url($path = null) {
     global $CFG;
+    if ($path === null) {
+        $path = '';
+    }
 
     // Absolute URLs are used unmodified.
     if (substr($path, 0, 7) === 'http://' || substr($path, 0, 8) === 'https://') {
@@ -714,18 +718,23 @@ function format_backtrace($callers, $plaintext = false) {
         if (!isset($caller['file'])) {
             $caller['file'] = 'unknownfile'; // probably call_user_func()
         }
-        $from .= $plaintext ? '* ' : '<li>';
-        $from .= 'line ' . $caller['line'] . ' of ' . str_replace($dirroot, '', $caller['file']);
+        $line = $plaintext ? '* ' : '<li>';
+        $line .= 'line ' . $caller['line'] . ' of ' . str_replace($dirroot, '', $caller['file']);
         if (isset($caller['function'])) {
-            $from .= ': call to ';
+            $line .= ': call to ';
             if (isset($caller['class'])) {
-                $from .= $caller['class'] . $caller['type'];
+                $line .= $caller['class'] . $caller['type'];
             }
-            $from .= $caller['function'] . '()';
+            $line .= $caller['function'] . '()';
         } else if (isset($caller['exception'])) {
-            $from .= ': '.$caller['exception'].' thrown';
+            $line .= ': '.$caller['exception'].' thrown';
         }
-        $from .= $plaintext ? "\n" : '</li>';
+
+        // Remove any non printable chars.
+        $line = preg_replace('/[[:^print:]]/', '', $line);
+
+        $line .= $plaintext ? "\n" : '</li>';
+        $from .= $line;
     }
     $from .= $plaintext ? '' : '</ul>';
 
@@ -1888,7 +1897,7 @@ function set_access_log_user() {
                 apache_note('MOODLEUSER', $logname);
             }
 
-            if ($logmethod == 'header') {
+            if ($logmethod == 'header' && !headers_sent()) {
                 header("X-MOODLEUSER: $logname");
             }
         }

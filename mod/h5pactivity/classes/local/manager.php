@@ -357,6 +357,9 @@ class manager {
 
         // But excluding all reviewattempts users converting a capabilities join into left join.
         $reviewersjoin = get_with_capability_join($context, 'mod/h5pactivity:reviewattempts', 'u.id');
+        if ($reviewersjoin->cannotmatchanyrows) {
+            return $capjoin;
+        }
 
         $capjoin = new sql_join(
             $capjoin->joins . "\n LEFT " . str_replace('ra', 'reviewer', $reviewersjoin->joins),
@@ -451,7 +454,9 @@ class manager {
      * @return report|null available report (or null if no report available)
      */
     public function get_report(int $userid = null, int $attemptid = null, $currentgroup = false): ?report {
-        global $USER;
+        global $USER, $CFG;
+
+        require_once("{$CFG->dirroot}/user/lib.php");
 
         // If tracking is disabled, no reports are available.
         if (!$this->instance->enabletracking) {
@@ -470,6 +475,14 @@ class manager {
 
         if ($this->can_view_all_attempts()) {
             $user = core_user::get_user($userid);
+
+            // Ensure user can view the attempt of specific userid, respecting access checks.
+            if ($user && $user->id != $USER->id) {
+                $course = get_course($this->coursemodule->course);
+                if ($this->coursemodule->effectivegroupmode == SEPARATEGROUPS && !user_can_view_profile($user, $course)) {
+                    return null;
+                }
+            }
         } else if ($this->can_view_own_attempts()) {
             $user = core_user::get_user($USER->id);
             if ($userid && $user->id != $userid) {

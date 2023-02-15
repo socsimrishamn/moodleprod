@@ -786,13 +786,13 @@ function validate_param($param, $type, $allownull=NULL_NOT_ALLOWED, $debuginfo='
  * $options = clean_param($options, PARAM_INT);
  * </code>
  *
- * @param array $param the variable array we are cleaning
+ * @param array|null $param the variable array we are cleaning
  * @param string $type expected format of param after cleaning.
  * @param bool $recursive clean recursive arrays
  * @return array
  * @throws coding_exception
  */
-function clean_param_array(array $param = null, $type, $recursive = false) {
+function clean_param_array(?array $param, $type, $recursive = false) {
     // Convert null to empty array.
     $param = (array)$param;
     foreach ($param as $key => $value) {
@@ -1089,8 +1089,9 @@ function clean_param($param, $type) {
                 } else if (preg_match('/^' . preg_quote($CFG->wwwroot . '/', '/') . '/i', $param)) {
                     // Absolute, and matches our wwwroot.
                 } else {
+
                     // Relative - let's make sure there are no tricks.
-                    if (validateUrlSyntax('/' . $param, 's-u-P-a-p-f+q?r?')) {
+                    if (validateUrlSyntax('/' . $param, 's-u-P-a-p-f+q?r?') && !preg_match('/javascript:/i', $param)) {
                         // Looks ok.
                     } else {
                         $param = '';
@@ -2878,7 +2879,8 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
 
     // Check that the user has agreed to a site policy if there is one - do not test in case of admins.
     // Do not test if the script explicitly asked for skipping the site policies check.
-    if (!$USER->policyagreed && !is_siteadmin() && !NO_SITEPOLICY_CHECK) {
+    // Or if the user auth type is webservice.
+    if (!$USER->policyagreed && !is_siteadmin() && !NO_SITEPOLICY_CHECK && $USER->auth !== 'webservice') {
         $manager = new \core_privacy\local\sitepolicy\manager();
         if ($policyurl = $manager->get_redirect_url(isguestuser())) {
             if ($preventredirect) {
@@ -3391,6 +3393,11 @@ function update_user_login_times() {
 
     if (isguestuser()) {
         // Do not update guest access times/ips for performance.
+        return true;
+    }
+
+    if (defined('USER_KEY_LOGIN') && USER_KEY_LOGIN === true) {
+        // Do not update user login time when using user key login.
         return true;
     }
 
@@ -5186,6 +5193,10 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
                         question_delete_activity($cm);
                         // Notify the competency subsystem.
                         \core_competency\api::hook_course_module_deleted($cm);
+
+                        // Delete all tag instances associated with the instance of this module.
+                        core_tag_tag::delete_instances("mod_{$modname}", null, context_module::instance($cm->id)->id);
+                        core_tag_tag::remove_all_item_tags('core', 'course_modules', $cm->id);
                     }
                     if (function_exists($moddelete)) {
                         // This purges all module data in related tables, extra user prefs, settings, etc.
@@ -7124,6 +7135,39 @@ function current_language() {
     $return = str_replace('_utf8', '', $return);
 
     return $return;
+}
+
+/**
+ * Fix the current language to the given language code.
+ *
+ * @param string $lang The language code to use.
+ * @return void
+ */
+function fix_current_language(string $lang): void {
+    global $CFG, $COURSE, $SESSION, $USER;
+
+    if (!get_string_manager()->translation_exists($lang)) {
+        throw new coding_exception("The language pack for $lang is not available");
+    }
+
+    $fixglobal = '';
+    $fixlang = 'lang';
+    if (!empty($SESSION->forcelang)) {
+        $fixglobal = $SESSION;
+        $fixlang = 'forcelang';
+    } else if (!empty($COURSE->id) && $COURSE->id != SITEID && !empty($COURSE->lang)) {
+        $fixglobal = $COURSE;
+    } else if (!empty($SESSION->lang)) {
+        $fixglobal = $SESSION;
+    } else if (!empty($USER->lang)) {
+        $fixglobal = $USER;
+    } else if (isset($CFG->lang)) {
+        set_config('lang', $lang);
+    }
+
+    if ($fixglobal) {
+        $fixglobal->$fixlang = $lang;
+    }
 }
 
 /**
@@ -9234,6 +9278,25 @@ function mtrace($string, $eol="\n", $sleep=0) {
     if ($sleep) {
         sleep($sleep);
     }
+}
+
+/**
+ * Helper to {@see mtrace()} an exception or throwable, including all relevant information.
+ *
+ * @param Throwable $e the error to ouptput.
+ */
+function mtrace_exception(Throwable $e): void {
+    $info = get_exception_info($e);
+
+    $message = $info->message;
+    if ($info->debuginfo) {
+        $message .= "\n\n" . $info->debuginfo;
+    }
+    if ($info->backtrace) {
+        $message .= "\n\n" . format_backtrace($info->backtrace, true);
+    }
+
+    mtrace($message);
 }
 
 /**

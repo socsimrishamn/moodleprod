@@ -334,6 +334,10 @@ class data_field_base {     // Base class for Database Field Types (see field/*/
         if (empty($this->field)) {   // No field has been defined yet, try and make one
             $this->define_default_field();
         }
+        // Throw an exception if field type doen't exist. Anyway user should never access to edit a field with an unknown fieldtype.
+        if ($this->type === 'unknown') {
+            throw new \moodle_exception(get_string('missingfieldtype', 'data', (object)['name' => $this->field->name]));
+        }
         echo $OUTPUT->box_start('generalbox boxaligncenter boxwidthwide');
 
         echo '<form id="editfield" action="'.$CFG->wwwroot.'/mod/data/field.php" method="post">'."\n";
@@ -351,7 +355,13 @@ class data_field_base {     // Base class for Database Field Types (see field/*/
 
         echo $OUTPUT->heading($this->name(), 3);
 
-        require_once($CFG->dirroot.'/mod/data/field/'.$this->type.'/mod.html');
+        $filepath = $CFG->dirroot.'/mod/data/field/'.$this->type.'/mod.html';
+
+        if (!file_exists($filepath)) {
+            throw new \moodle_exception(get_string('missingfieldtype', 'data', (object)['name' => $this->field->name]));
+        } else {
+            require_once($filepath);
+        }
 
         echo html_writer::start_div('mt-3');
         echo html_writer::tag('input', null, array('type' => 'submit', 'value' => $savebutton,
@@ -363,6 +373,19 @@ class data_field_base {     // Base class for Database Field Types (see field/*/
         echo '</form>';
 
         echo $OUTPUT->box_end();
+    }
+
+    /**
+     * Validates params of fieldinput data. Overwrite to validate fieldtype specific data.
+     *
+     * You are expected to return an array like ['paramname' => 'Error message for paramname param'] if there is an error,
+     * return an empty array if everything is fine.
+     *
+     * @param stdClass $fieldinput The field input data to check
+     * @return array $errors if empty validation was fine, otherwise contains one or more error messages
+     */
+    public function validate(stdClass $fieldinput): array {
+        return [];
     }
 
     /**
@@ -883,7 +906,12 @@ function data_get_field_from_id($fieldid, $data){
 function data_get_field_new($type, $data) {
     global $CFG;
 
-    require_once($CFG->dirroot.'/mod/data/field/'.$type.'/field.class.php');
+    $filepath = $CFG->dirroot.'/mod/data/field/'.$type.'/field.class.php';
+    // It should never access this method if the subfield class doesn't exist.
+    if (!file_exists($filepath)) {
+        throw new \moodle_exception('invalidfieldtype', 'data');
+    }
+    require_once($filepath);
     $newfield = 'data_field_'.$type;
     $newfield = new $newfield(0, $data);
     return $newfield;
@@ -895,20 +923,24 @@ function data_get_field_new($type, $data) {
  * input: $param $field - record from db
  *
  * @global object
- * @param object $field
- * @param object $data
- * @param object $cm
- * @return object
+ * @param stdClass $field the field record
+ * @param stdClass $data the data instance
+ * @param stdClass|null $cm optional course module data
+ * @return data_field_base the field object instance or data_field_base if unkown type
  */
 function data_get_field($field, $data, $cm=null) {
     global $CFG;
-
-    if ($field) {
-        require_once('field/'.$field->type.'/field.class.php');
-        $newfield = 'data_field_'.$field->type;
-        $newfield = new $newfield($field, $data, $cm);
-        return $newfield;
+    if (!isset($field->type)) {
+        return new data_field_base($field);
     }
+    $filepath = $CFG->dirroot.'/mod/data/field/'.$field->type.'/field.class.php';
+    if (!file_exists($filepath)) {
+        return new data_field_base($field);
+    }
+    require_once($filepath);
+    $newfield = 'data_field_'.$field->type;
+    $newfield = new $newfield($field, $data, $cm);
+    return $newfield;
 }
 
 
@@ -1133,22 +1165,12 @@ function data_delete_instance($id) {    // takes the dataid
     $cm = get_coursemodule_from_instance('data', $data->id);
     $context = context_module::instance($cm->id);
 
-/// Delete all the associated information
-
-    // files
-    $fs = get_file_storage();
-    $fs->delete_area_files($context->id, 'mod_data');
-
-    // get all the records in this data
-    $sql = "SELECT r.id
-              FROM {data_records} r
-             WHERE r.dataid = ?";
-
-    $DB->delete_records_select('data_content', "recordid IN ($sql)", array($id));
-
-    // delete all the records and fields
-    $DB->delete_records('data_records', array('dataid'=>$id));
-    $DB->delete_records('data_fields', array('dataid'=>$id));
+    // Delete all information related to fields.
+    $fields = $DB->get_records('data_fields', ['dataid' => $id]);
+    foreach ($fields as $field) {
+        $todelete = data_get_field($field, $data, $cm);
+        $todelete->delete_field();
+    }
 
     // Remove old calendar events.
     $events = $DB->get_records('event', array('modulename' => 'data', 'instance' => $id));
@@ -1924,6 +1946,9 @@ function data_print_preference_form($data, $perpage, $search, $sort='', $order='
         $fieldname = preg_quote($fieldname, '/');
         $patterns[] = "/\[\[$fieldname\]\]/i";
         $searchfield = data_get_field_from_id($field->field->id, $data);
+        if ($searchfield->type === 'unknown') {
+            continue;
+        }
         if (!empty($search_array[$field->field->id]->data)) {
             $replacement[] = $searchfield->display_search_field($search_array[$field->field->id]->data);
         } else {
@@ -2622,7 +2647,7 @@ abstract class data_preset_importer {
      * @return bool
      */
     function import($overwritesettings) {
-        global $DB, $CFG;
+        global $DB, $CFG, $OUTPUT;
 
         $params = $this->get_preset_settings();
         $settings = $params->settings;
@@ -2643,7 +2668,7 @@ abstract class data_preset_importer {
                 }
                 else $preservedfields[$cid] = true;
             }
-
+            $missingfieldtypes = [];
             foreach ($newfields as $nid => $newfield) {
                 $cid = optional_param("field_$nid", -1, PARAM_INT);
 
@@ -2660,7 +2685,12 @@ abstract class data_preset_importer {
                     unset($fieldobject);
                 } else {
                     /* Make a new field */
-                    include_once("field/$newfield->type/field.class.php");
+                    $filepath = "field/$newfield->type/field.class.php";
+                    if (!file_exists($filepath)) {
+                        $missingfieldtypes[] = $newfield->name;
+                        continue;
+                    }
+                    include_once($filepath);
 
                     if (!isset($newfield->description)) {
                         $newfield->description = '';
@@ -2671,20 +2701,20 @@ abstract class data_preset_importer {
                     unset($fieldclass);
                 }
             }
+            if (!empty($missingfieldtypes)) {
+                echo $OUTPUT->notification(get_string('missingfieldtypeimport', 'data') . html_writer::alist($missingfieldtypes));
+            }
         }
 
         /* Get rid of all old unused data */
-        if (!empty($preservedfields)) {
-            foreach ($currentfields as $cid => $currentfield) {
-                if (!array_key_exists($cid, $preservedfields)) {
-                    /* Data not used anymore so wipe! */
-                    print "Deleting field $currentfield->name<br />";
+        foreach ($currentfields as $cid => $currentfield) {
+            if (!array_key_exists($cid, $preservedfields)) {
+                /* Data not used anymore so wipe! */
+                echo "Deleting field $currentfield->name<br />";
 
-                    $id = $currentfield->id;
-                    //Why delete existing data records and related comments/ratings??
-                    $DB->delete_records('data_content', array('fieldid'=>$id));
-                    $DB->delete_records('data_fields', array('id'=>$id));
-                }
+                // Delete all information related to fields.
+                $todelete = data_get_field_from_id($currentfield->id, $this->module);
+                $todelete->delete_field();
             }
         }
 
@@ -3108,7 +3138,12 @@ function data_import_csv($cm, $data, &$csvdata, $encoding, $fielddelimiter) {
                     unset($fieldnames[$id]); // To ensure the user provided content fields remain in the array once flipped.
                 } else {
                     $field = $rawfields[$name];
-                    require_once("$CFG->dirroot/mod/data/field/$field->type/field.class.php");
+                    $filepath = "$CFG->dirroot/mod/data/field/$field->type/field.class.php";
+                    if (!file_exists($filepath)) {
+                        $errorfield .= "'$name' ";
+                        continue;
+                    }
+                    require_once($filepath);
                     $classname = 'data_field_' . $field->type;
                     $fields[$name] = new $classname($field, $data, $cm);
                 }
@@ -4178,7 +4213,8 @@ function data_get_advanced_search_sql($sort, $data, $recordids, $selectdata, $so
 
     // Find the field we are sorting on
     if ($sort > 0 or data_get_field_from_id($sort, $data)) {
-        $selectdata .= ' AND c.fieldid = :sort';
+        $selectdata .= ' AND c.fieldid = :sort AND s.recordid = r.id';
+        $nestselectsql .= ',{data_content} s ';
     }
 
     // If there are no record IDs then return an sql statment that will return no rows.
